@@ -164,21 +164,12 @@ _install_nixos() {
     echo -e "\e[1;33m  Как подключить zapret к вашей конфигурации NixOS:\e[0m"
     echo -e "\e[1;33m══════════════════════════════════════════════════════\e[0m"
     echo ""
-    echo -e "\e[1;36m── Вариант 1: Flakes — только enable ──\e[0m"
-    echo ""
-    echo -e "  В \e[1mconfiguration.nix\e[0m добавьте:"
-    echo '       services.zapret.enable = true;'
-    echo ""
-    echo -e "  NixOS 25.05+ включает модуль zapret из коробки — больше ничего не нужно."
-    echo ""
-    echo -e "\e[1;36m── Вариант 2: Flakes — с пакетом из HEAD ──\e[0m"
-    echo ""
-    echo -e "  Если хотите использовать актуальный пакет zapret вместо nixpkgs:"
+    echo -e "\e[1;36m── Вариант 1: Flakes (рекомендуется) ──\e[0m"
     echo ""
     echo -e "  1) В \e[1mflake.nix\e[0m → \e[1minputs\e[0m добавьте:"
     echo '       zapret.url = "github:kira-we1ss/zapret.installer-nix";'
     echo ""
-    echo -e "  2) В \e[1moutputs\e[0m добавьте \e[1mzapret\e[0m в аргументы:"
+    echo -e "  2) В \e[1moutputs\e[0m добавьте \e[1mzapret\e[0m в аргументы функции:"
     echo '       outputs = { self, nixpkgs, ..., zapret }: {'
     echo ""
     echo -e "  3) В список \e[1mmodules\e[0m вашего nixosSystem добавьте:"
@@ -187,11 +178,11 @@ _install_nixos() {
     echo -e "  4) В \e[1mconfiguration.nix\e[0m добавьте:"
     echo '       services.zapret.enable = true;'
     echo ""
-    echo -e "\e[1;36m── Вариант 3: Без flakes ──\e[0m"
+    echo -e "\e[1;36m── Вариант 2: Без flakes ──\e[0m"
     echo ""
-    echo -e "  В \e[1mconfiguration.nix\e[0m добавьте:"
+    echo -e "  1) В \e[1mconfiguration.nix\e[0m добавьте:"
+    echo '       imports = [ /etc/nixos/zapret.nix ];'
     echo '       services.zapret.enable = true;'
-    echo -e "  (модуль уже встроен в nixpkgs, импорт не нужен)"
     echo ""
     echo -e "\e[1;33m══════════════════════════════════════════════════════\e[0m"
     echo ""

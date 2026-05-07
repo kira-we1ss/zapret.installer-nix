@@ -62,6 +62,10 @@ main_menu() {
     done
 }
 install_zapret_menu() {
+    if [ "$NIXOS" = true ]; then
+        _install_nixos
+        return
+    fi
     while true; do
         clear
         echo -e "\e[1;36m╔════════════════════════════════════════════╗"
@@ -78,7 +82,6 @@ install_zapret_menu() {
             *) echo -e "\e[1;31mНеверный ввод! Попробуйте снова.\e[0m"; sleep 2 ;;
         esac
     done
-
 }
 change_configuration() {
     while true; do
