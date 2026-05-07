@@ -149,16 +149,42 @@ _install_nixos() {
             || error_exit "не удалось получить репозиторий конфигураций."
     fi
 
-    # Copy NixOS module to /etc/nixos/
+    # Copy NixOS files to /etc/nixos/
     local module_src="$INSTALLER_DIR/nix/module.nix"
+    local package_src="$INSTALLER_DIR/nix/package.nix"
     if [[ ! -f "$module_src" ]]; then
         error_exit "Файл модуля не найден: $module_src"
     fi
-    cp "$module_src" /etc/nixos/zapret.nix \
-        || error_exit "не удалось скопировать модуль в /etc/nixos/"
+    mkdir -p /etc/nixos/zapret
+    cp "$module_src"  /etc/nixos/zapret/module.nix  \
+        || error_exit "не удалось скопировать module.nix в /etc/nixos/zapret/"
+    cp "$package_src" /etc/nixos/zapret/package.nix \
+        || error_exit "не удалось скопировать package.nix в /etc/nixos/zapret/"
+
+    # Get the latest zapret commit for pinning
+    local zapret_rev
+    zapret_rev=$(git ls-remote https://github.com/bol-van/zapret HEAD 2>/dev/null | cut -f1) || true
+
+    cat > /etc/nixos/zapret/default.nix << NIXEOF
+{ config, pkgs, lib, ... }:
+{
+  imports = [ ./module.nix ];
+  config = lib.mkIf config.services.zapret.enable {
+    services.zapret.package = lib.mkDefault (pkgs.callPackage ./package.nix {
+      zapret-src = pkgs.fetchFromGitHub {
+        owner = "bol-van";
+        repo  = "zapret";
+        rev   = "${zapret_rev:-REPLACE_WITH_COMMIT_SHA}";
+        # Run: nix-prefetch-url --unpack https://github.com/bol-van/zapret/archive/${zapret_rev:-REPLACE_WITH_COMMIT_SHA}.tar.gz
+        hash  = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+      };
+    });
+  };
+}
+NIXEOF
 
     echo ""
-    echo -e "\e[32mМодуль скопирован в /etc/nixos/zapret.nix\e[0m"
+    echo -e "\e[32mМодуль скопирован в /etc/nixos/zapret/\e[0m"
     echo ""
     echo -e "\e[1;33m══════════════════════════════════════════════════════\e[0m"
     echo -e "\e[1;33m  Как подключить zapret к вашей конфигурации NixOS:\e[0m"
@@ -181,8 +207,16 @@ _install_nixos() {
     echo -e "\e[1;36m── Вариант 2: Без flakes ──\e[0m"
     echo ""
     echo -e "  1) В \e[1mconfiguration.nix\e[0m добавьте:"
-    echo '       imports = [ /etc/nixos/zapret.nix ];'
+    echo '       imports = [ ./zapret/default.nix ];'
     echo '       services.zapret.enable = true;'
+    echo ""
+    echo -e "  2) Откройте \e[1m/etc/nixos/zapret/default.nix\e[0m и заполните поле \e[1mhash\e[0m:"
+    if [ -n "$zapret_rev" ]; then
+        echo "       nix-prefetch-url --unpack https://github.com/bol-van/zapret/archive/${zapret_rev}.tar.gz"
+    else
+        echo "       Получите rev: git ls-remote https://github.com/bol-van/zapret HEAD | cut -f1"
+        echo "       Получите hash: nix-prefetch-url --unpack https://github.com/bol-van/zapret/archive/<rev>.tar.gz"
+    fi
     echo ""
     echo -e "\e[1;33m══════════════════════════════════════════════════════\e[0m"
     echo ""
@@ -365,10 +399,13 @@ update_zapret() {
             cd "$ZAPRET_DIR/zapret.cfgs" && git fetch origin && git checkout -B main origin/main && git reset --hard origin/main
         fi
 
-        # Copy possibly-updated module to /etc/nixos/
+        # Copy possibly-updated module/package to /etc/nixos/zapret/
         if [[ -f "$INSTALLER_DIR/nix/module.nix" ]]; then
-            cp "$INSTALLER_DIR/nix/module.nix" /etc/nixos/zapret.nix \
-                || echo "Предупреждение: не удалось обновить /etc/nixos/zapret.nix"
+            mkdir -p /etc/nixos/zapret
+            cp "$INSTALLER_DIR/nix/module.nix"  /etc/nixos/zapret/module.nix \
+                || echo "Предупреждение: не удалось обновить /etc/nixos/zapret/module.nix"
+            cp "$INSTALLER_DIR/nix/package.nix" /etc/nixos/zapret/package.nix \
+                || echo "Предупреждение: не удалось обновить /etc/nixos/zapret/package.nix"
         fi
 
         _nixos_rebuild_prompt
@@ -493,10 +530,10 @@ uninstall_zapret() {
         [Yy]* )
             if [ "$NIXOS" = true ]; then
                 echo -e "\e[36mУдаление Запрета на NixOS...\e[0m"
-                rm -f /etc/nixos/zapret.nix
+                rm -rf /etc/nixos/zapret
                 echo ""
                 echo -e "\e[33mНе забудьте убрать строку\e[0m"
-                echo "  imports = [ ./zapret.nix ];"
+                echo "  imports = [ ./zapret/default.nix ];"
                 echo -e "\e[33mиз /etc/nixos/configuration.nix (или flake.nix)\e[0m"
                 echo ""
                 _nixos_rebuild_prompt
