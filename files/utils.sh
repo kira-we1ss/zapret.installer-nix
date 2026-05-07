@@ -18,7 +18,7 @@ detect_nixos() {
         if [ "$_id" = "nixos" ]; then
             NIXOS=true
             ZAPRET_DIR=/var/lib/zapret
-            INSTALLER_DIR=/var/lib/zapret.installer
+            INSTALLER_DIR="${INSTALLER_DIR:-/var/lib/zapret.installer}"
             ZAPRET_VER_FILE=/var/lib/zapret/version
         fi
     fi
