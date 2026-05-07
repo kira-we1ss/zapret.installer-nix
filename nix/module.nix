@@ -151,7 +151,7 @@ in {
 
           case "''${MODE:-nfqws}" in
             nfqws)
-              exec "$BINDIR/nfqws" $NFQWS_OPT
+              exec "$BINDIR/nfqws" --qnum="''${QNUM:-200}" $NFQWS_OPT
               ;;
             tpws)
               exec "$BINDIR/tpws" $TPWS_OPT
