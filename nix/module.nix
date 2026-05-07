@@ -113,6 +113,8 @@ in {
       wants    = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
 
+      path = [ pkgs.ipset pkgs.iptables pkgs.iproute2 pkgs.bash ];
+
       serviceConfig = {
         Type           = "simple";
         StateDirectory = "zapret";
@@ -130,12 +132,12 @@ in {
           for f in "$LISTS_DIR"/ipset-*.txt; do
             [ -f "$f" ] || continue
             setname=$(basename "$f" .txt)
-            ipset create "$setname" hash:net family inet hashsize 4096 maxelem 1048576 2>/dev/null || true
-            ipset flush "$setname"
+            ${pkgs.ipset}/bin/ipset create "$setname" hash:net family inet hashsize 4096 maxelem 1048576 2>/dev/null || true
+            ${pkgs.ipset}/bin/ipset flush "$setname"
             while IFS= read -r line || [ -n "$line" ]; do
               line=$(echo "$line" | sed 's/#.*//' | xargs)
               [ -z "$line" ] && continue
-              ipset add "$setname" "$line" 2>/dev/null || true
+              ${pkgs.ipset}/bin/ipset add "$setname" "$line" 2>/dev/null || true
             done < "$f"
           done
 

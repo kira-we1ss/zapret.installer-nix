@@ -1,17 +1,3 @@
-# nix/package.nix
-#
-# Builds the zapret binaries (nfqws, tpws, ip2net, mdig) from source.
-#
-# Usage (traditional, without flakes):
-#   pkgs.callPackage ./nix/package.nix {
-#     zapret-src = pkgs.fetchFromGitHub {
-#       owner = "bol-van"; repo = "zapret";
-#       rev = "..."; hash = "sha256-...";
-#     };
-#   }
-#
-# When used via flake.nix the zapret-src argument is wired up automatically.
-
 { lib
 , stdenv
 , zapret-src
@@ -26,9 +12,7 @@
 }:
 
 stdenv.mkDerivation {
-  pname = "zapret";
-  # The upstream repo has no version file; use the git revision supplied by
-  # the caller (flake) or fall back to "git".
+  pname   = "zapret";
   version = zapret-src.rev or "git";
 
   src = zapret-src;
@@ -43,39 +27,27 @@ stdenv.mkDerivation {
     iptables
   ];
 
-  # zapret does not have a top-level Makefile that builds everything at once.
-  # Each tool is in its own subdirectory with its own Makefile.
   buildPhase = ''
     runHook preBuild
-
-    for tool in nfqws tpws ip2net mdig; do
-      if [ -d "$tool" ]; then
-        echo "Building $tool..."
-        make -C "$tool" PREFIX="$out"
-      fi
-    done
-
+    make -C nfq    PREFIX="$out"
+    make -C tpws   PREFIX="$out"
+    make -C ip2net PREFIX="$out"
+    make -C mdig   PREFIX="$out"
     runHook postBuild
   '';
 
   installPhase = ''
     runHook preInstall
-
     mkdir -p "$out/bin" "$out/share/zapret/ipset"
-
-    for tool in nfqws tpws ip2net mdig; do
-      if [ -f "$tool/$tool" ]; then
-        install -Dm755 "$tool/$tool" "$out/bin/$tool"
-      fi
-    done
-
-    # Install the ipset helper scripts used by the service
+    install -Dm755 nfq/nfqws    "$out/bin/nfqws"
+    install -Dm755 tpws/tpws    "$out/bin/tpws"
+    install -Dm755 ip2net/ip2net "$out/bin/ip2net"
+    install -Dm755 mdig/mdig    "$out/bin/mdig"
     if [ -d ipset ]; then
       for f in ipset/get_*.sh ipset/create_*.sh; do
         [ -f "$f" ] && install -Dm755 "$f" "$out/share/zapret/ipset/$(basename "$f")"
       done
     fi
-
     runHook postInstall
   '';
 
