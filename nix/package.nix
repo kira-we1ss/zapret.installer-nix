@@ -43,13 +43,13 @@ stdenv.mkDerivation {
   installPhase = ''
     runHook preInstall
     mkdir -p "$out/bin" "$out/share/zapret/ipset" "$out/share/zapret/fake"
-    install -Dm755 nfq/nfqws    "$out/bin/nfqws"
-    install -Dm755 tpws/tpws    "$out/bin/tpws"
+    install -Dm755 nfq/nfqws     "$out/bin/nfqws"
+    install -Dm755 tpws/tpws     "$out/bin/tpws"
     install -Dm755 ip2net/ip2net "$out/bin/ip2net"
-    install -Dm755 mdig/mdig    "$out/bin/mdig"
-    if [ -d files/fake ]; then
-      cp -r files/fake/. "$out/share/zapret/fake/"
-    fi
+    install -Dm755 mdig/mdig     "$out/bin/mdig"
+    cp -r files/fake/. "$out/share/zapret/fake/"
+    cp -r common       "$out/share/zapret/common"
+    cp -r files        "$out/share/zapret/files"
     if [ -d ipset ]; then
       for f in ipset/get_*.sh ipset/create_*.sh; do
         [ -f "$f" ] && install -Dm755 "$f" "$out/share/zapret/ipset/$(basename "$f")"

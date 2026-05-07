@@ -113,11 +113,41 @@ in {
       wants    = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
 
-      path = [ pkgs.ipset pkgs.iptables pkgs.iproute2 pkgs.bash ];
+      path = [
+        pkgs.ipset pkgs.iptables pkgs.iproute2 pkgs.bash
+        pkgs.nftables pkgs.coreutils pkgs.gnused pkgs.gawk
+      ];
 
       serviceConfig = {
         Type           = "simple";
         StateDirectory = "zapret";
+        ExecStartPre = pkgs.writeShellScript "zapret-fw-start" ''
+          CONFIG=${stateDir}/config
+          [ -f "$CONFIG" ] || exit 0
+
+          TMPCONF=$(mktemp)
+          sed \
+            -e 's|/opt/zapret/files/fake/|${cfg.package}/share/zapret/fake/|g' \
+            -e 's|/opt/zapret/ipset/|${stateDir}/ipset/|g' \
+            -e 's|/opt/zapret/|${stateDir}/|g' \
+            "$CONFIG" > "$TMPCONF"
+
+          ZAPRET_BASE=${cfg.package}/share/zapret
+          . "$TMPCONF"
+          . "$ZAPRET_BASE/common/base.sh"
+          . "$ZAPRET_BASE/common/fwtype.sh"
+          . "$ZAPRET_BASE/common/ipt.sh"
+          . "$ZAPRET_BASE/common/nft.sh"
+          . "$ZAPRET_BASE/common/linux_iphelper.sh"
+          . "$ZAPRET_BASE/common/linux_fw.sh"
+
+          IPSET_DIR=${stateDir}/ipset
+          ZAPRET_IP_IFACE_INCLUDE=""
+          create_ipset() { return 0; }
+
+          zapret_do_firewall 1
+          rm -f "$TMPCONF"
+        '';
         ExecStart = pkgs.writeShellScript "zapret-start" ''
           CONFIG=${stateDir}/config
           if [ ! -f "$CONFIG" ]; then
@@ -126,7 +156,7 @@ in {
           fi
 
           TMPCONF=$(mktemp)
-          ${pkgs.gnused}/bin/sed \
+          sed \
             -e 's|/opt/zapret/files/fake/|${cfg.package}/share/zapret/fake/|g' \
             -e 's|/opt/zapret/ipset/|${stateDir}/ipset/|g' \
             -e 's|/opt/zapret/|${stateDir}/|g' \
@@ -161,6 +191,29 @@ in {
               exit 1
               ;;
           esac
+        '';
+        ExecStopPost = pkgs.writeShellScript "zapret-fw-stop" ''
+          CONFIG=${stateDir}/config
+          [ -f "$CONFIG" ] || exit 0
+
+          TMPCONF=$(mktemp)
+          sed \
+            -e 's|/opt/zapret/files/fake/|${cfg.package}/share/zapret/fake/|g' \
+            -e 's|/opt/zapret/ipset/|${stateDir}/ipset/|g' \
+            -e 's|/opt/zapret/|${stateDir}/|g' \
+            "$CONFIG" > "$TMPCONF"
+
+          ZAPRET_BASE=${cfg.package}/share/zapret
+          . "$TMPCONF"
+          . "$ZAPRET_BASE/common/base.sh"
+          . "$ZAPRET_BASE/common/fwtype.sh"
+          . "$ZAPRET_BASE/common/ipt.sh"
+          . "$ZAPRET_BASE/common/nft.sh"
+          . "$ZAPRET_BASE/common/linux_iphelper.sh"
+          . "$ZAPRET_BASE/common/linux_fw.sh"
+
+          zapret_do_firewall 0
+          rm -f "$TMPCONF"
         '';
         Restart    = "on-failure";
         RestartSec = "5s";
