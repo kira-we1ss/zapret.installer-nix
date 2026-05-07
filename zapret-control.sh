@@ -1,11 +1,19 @@
 #!/bin/bash
 
-source "/opt/zapret.installer/files/utils.sh"
-source "/opt/zapret.installer/files/config.sh"
-source "/opt/zapret.installer/files/init.sh"
-source "/opt/zapret.installer/files/menu.sh"
-source "/opt/zapret.installer/files/service.sh"
-source "/opt/zapret.installer/files/install.sh"
+# Always derive INSTALLER_DIR from the location of this script itself.
+# This works regardless of OS, install path, or how the script was invoked.
+INSTALLER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+source "$INSTALLER_DIR/files/utils.sh"
+source "$INSTALLER_DIR/files/config.sh"
+source "$INSTALLER_DIR/files/init.sh"
+source "$INSTALLER_DIR/files/menu.sh"
+source "$INSTALLER_DIR/files/service.sh"
+source "$INSTALLER_DIR/files/install.sh"
+
+# Now that utils.sh is sourced, run the full detect_nixos() which sets all
+# path variables used by the rest of the scripts.
+detect_nixos
 
 set -e  
 
@@ -23,7 +31,7 @@ else
 fi
 
 if [[ $EUID -ne 0 ]]; then
-    exec $SUDO "$0" "$@"
+    exec $SUDO bash "$0" "$@"
 fi
 trap fast_exit SIGINT
 check_openwrt

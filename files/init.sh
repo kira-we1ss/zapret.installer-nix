@@ -5,6 +5,12 @@
 detect_init() {
     GET_LIST_PREFIX=/ipset/get_
 
+    # NixOS always uses systemd — skip all other detection.
+    if [ "$NIXOS" = true ]; then
+        INIT_SYSTEM="systemd"
+        return
+    fi
+
     SYSTEMD_DIR=/lib/systemd
     [ -d "$SYSTEMD_DIR" ] || SYSTEMD_DIR=/usr/lib/systemd
     [ -d "$SYSTEMD_DIR" ] && SYSTEMD_SYSTEM_DIR="$SYSTEMD_DIR/system"
@@ -30,6 +36,31 @@ detect_init() {
 }
 
 check_zapret_exist() {
+    # On NixOS the service unit is provided by the NixOS module; we check
+    # whether it is known to systemd (even if not yet started).
+    if [ "$NIXOS" = true ]; then
+        if systemctl cat zapret >/dev/null 2>&1; then
+            service_exists=true
+        else
+            service_exists=false
+        fi
+        if [ -d "$ZAPRET_DIR" ]; then
+            dir_exists=true
+            # On NixOS binaries live in the Nix store, not $ZAPRET_DIR/binaries.
+            # We consider them present when the state dir exists and the service unit does.
+            binaries_exists=true
+        else
+            dir_exists=false
+            binaries_exists=false
+        fi
+        if [ "$service_exists" = true ] && [ "$dir_exists" = true ]; then
+            ZAPRET_EXIST=true
+        else
+            ZAPRET_EXIST=false
+        fi
+        return
+    fi
+
     case "$INIT_SYSTEM" in
         systemd)
             if [ -f /etc/systemd/system/timers.target.wants/zapret-list-update.timer ]; then
@@ -63,9 +94,9 @@ check_zapret_exist() {
             ;;
     esac
 
-    if [ -d /opt/zapret ]; then
+    if [ -d "$ZAPRET_DIR" ]; then
         dir_exists=true
-        [ -d /opt/zapret/binaries ] && binaries_exists=true || binaries_exists=false
+        [ -d "$ZAPRET_DIR/binaries" ] && binaries_exists=true || binaries_exists=false
     else
         dir_exists=false
         binaries_exists=false

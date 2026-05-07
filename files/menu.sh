@@ -133,9 +133,9 @@ change_configuration() {
             9) search_in_zapret_exc ;;
             10) configure_custom_conf_path ;;
             11) configure_custom_list_path ;;
-            12) open_editor /opt/zapret/config ;;
-            13) open_editor /opt/zapret/ipset/zapret-hosts-user.txt ;;
-            14) open_editor /opt/zapret/ipset/zapret-hosts-user-exclude.txt ;;
+            12) open_editor $ZAPRET_DIR/config ;;
+            13) open_editor $ZAPRET_DIR/ipset/zapret-hosts-user.txt ;;
+            14) open_editor $ZAPRET_DIR/ipset/zapret-hosts-user-exclude.txt ;;
             15) edit_cust_list;;
             16) edit_cust_conf;;
             0) main_menu ;;
@@ -173,7 +173,7 @@ update_zapret_menu(){
         clear
         echo -e "\e[1;36m╔════════════════════════════════════╗"
         echo -e "║           Обновление Запрета       ║"
-        echo -e "║         Текущая версия: $(if [ -f /opt/zapret-ver ]; then cat /opt/zapret-ver; else echo "Неизвестно";fi)       ║"
+        echo -e "║         Текущая версия: $(if [ -f $ZAPRET_VER_FILE ]; then cat $ZAPRET_VER_FILE; else echo "Неизвестно";fi)       ║"
 
         echo -e "║       Последняя версия: $(get_latest_version)       ║"
         echo -e "╚════════════════════════════════════╝\e[0m"

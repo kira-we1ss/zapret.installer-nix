@@ -1,5 +1,28 @@
 #!/bin/bash
 
+# ---------------------------------------------------------------------------
+# Path variables — set by detect_nixos(), used everywhere else.
+# Defaults are the traditional /opt layout for non-NixOS systems.
+# ---------------------------------------------------------------------------
+NIXOS=false
+ZAPRET_DIR=/opt/zapret
+# INSTALLER_DIR is set by zapret-control.sh before sourcing this file.
+# Only fall back to the default if it wasn't already set.
+INSTALLER_DIR="${INSTALLER_DIR:-/opt/zapret.installer}"
+ZAPRET_VER_FILE=/opt/zapret-ver
+
+detect_nixos() {
+    if [ -f /etc/os-release ]; then
+        local _id
+        _id=$(. /etc/os-release && echo "${ID:-}")
+        if [ "$_id" = "nixos" ]; then
+            NIXOS=true
+            ZAPRET_DIR=/var/lib/zapret
+            INSTALLER_DIR=/var/lib/zapret.installer
+            ZAPRET_VER_FILE=/var/lib/zapret/version
+        fi
+    fi
+}
 
 error_exit() {
     $TPUT_E

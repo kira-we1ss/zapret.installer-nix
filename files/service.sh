@@ -28,14 +28,14 @@ manage_autostart() {
             ;;
         runit)
             if [[ "$1" == "enable" ]]; then
-                ln -fs /opt/zapret/init.d/runit/zapret/ /var/service/
+                ln -fs "$ZAPRET_DIR/init.d/runit/zapret/" /var/service/
             else
                 rm -f /var/service/zapret
             fi
             ;;
         runit-artix)
             if [[ "$1" == "enable" ]]; then
-                ln -fs /opt/zapret/init.d/runit/zapret/ /run/runit/service/
+                ln -fs "$ZAPRET_DIR/init.d/runit/zapret/" /run/runit/service/
             else
                 rm -f /run/runit/service/zapret
             fi
@@ -59,7 +59,33 @@ manage_autostart() {
     esac
 }
 
+# check_zapret_exist and check_zapret_status are canonical in init.sh.
+# The definitions below are kept for compatibility but delegate to the same
+# logic — they are identical to the ones in init.sh.
+
 check_zapret_exist() {
+    # On NixOS the service unit is provided by the NixOS module.
+    if [ "$NIXOS" = true ]; then
+        if systemctl cat zapret >/dev/null 2>&1; then
+            service_exists=true
+        else
+            service_exists=false
+        fi
+        if [ -d "$ZAPRET_DIR" ]; then
+            dir_exists=true
+            binaries_exists=true
+        else
+            dir_exists=false
+            binaries_exists=false
+        fi
+        if [ "$service_exists" = true ] && [ "$dir_exists" = true ]; then
+            ZAPRET_EXIST=true
+        else
+            ZAPRET_EXIST=false
+        fi
+        return
+    fi
+
     case "$INIT_SYSTEM" in
         systemd)
             if [ -f /etc/systemd/system/timers.target.wants/zapret-list-update.timer ]; then
@@ -93,9 +119,9 @@ check_zapret_exist() {
             ;;
     esac
 
-    if [ -d /opt/zapret ]; then
+    if [ -d "$ZAPRET_DIR" ]; then
         dir_exists=true
-        [ -d /opt/zapret/binaries ] && binaries_exists=true || binaries_exists=false
+        [ -d "$ZAPRET_DIR/binaries" ] && binaries_exists=true || binaries_exists=false
     else
         dir_exists=false
         binaries_exists=false
@@ -224,6 +250,12 @@ toggle_service() {
 
 detect_init() {
     GET_LIST_PREFIX=/ipset/get_
+
+    # NixOS always uses systemd — skip all other detection.
+    if [ "$NIXOS" = true ]; then
+        INIT_SYSTEM="systemd"
+        return
+    fi
 
     SYSTEMD_DIR=/lib/systemd
     [ -d "$SYSTEMD_DIR" ] || SYSTEMD_DIR=/usr/lib/systemd

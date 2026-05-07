@@ -22,7 +22,7 @@ get_fwtype() {
                     else
                         echo -e "\e[1;33m⚠️ Не удалось определить тип файрвола.\e[0m"
                         echo -e "По умолчанию будет использован: \e[1;36mnftables\e[0m"
-                        echo -e "\e[2m(Можно изменить в /opt/zapret/config)\e[0m"
+                        echo -e "\e[2m(Можно изменить в $ZAPRET_DIR/config)\e[0m"
                         echo -e "⏳ Продолжаю через 5 секунд..."
                         FWTYPE="nftables"
                         sleep 5
@@ -30,7 +30,7 @@ get_fwtype() {
                     fi
                 else
                     echo -e "\e[1;33m⚠️ iptables не найден. Используется по умолчанию: \e[1;36mnftables\e[0m"
-                    echo -e "\e[2m(Можно изменить в /opt/zapret/config)\e[0m"
+                    echo -e "\e[2m(Можно изменить в $ZAPRET_DIR/config)\e[0m"
                     echo -e "⏳ Продолжаю через 5 секунд..."
                     FWTYPE="nftables"
                     sleep 5
@@ -48,7 +48,7 @@ get_fwtype() {
                 else
                     echo -e "\e[1;33m⚠️ Не удалось определить тип файрвола.\e[0m"
                     echo -e "По умолчанию используется: \e[1;36miptables\e[0m"
-                    echo -e "\e[2m(Можно изменить в /opt/zapret/config)\e[0m"
+                    echo -e "\e[2m(Можно изменить в $ZAPRET_DIR/config)\e[0m"
                     echo -e "⏳ Продолжаю через 5 секунд..."
                     FWTYPE="iptables"
                     sleep 5
@@ -56,7 +56,7 @@ get_fwtype() {
             else
                 echo -e "\e[1;31m❌ iptables не найден!\e[0m"
                 echo -e "По умолчанию используется: \e[1;36miptables\e[0m"
-                echo -e "\e[2m(Можно изменить в /opt/zapret/config)\e[0m"
+                echo -e "\e[2m(Можно изменить в $ZAPRET_DIR/config)\e[0m"
                 echo -e "⏳ Продолжаю через 5 секунд..."
                 FWTYPE="iptables"
                 sleep 5
@@ -68,7 +68,7 @@ get_fwtype() {
             else
                 echo -e "\e[1;33m⚠️ ipfw не найден!\e[0m"
                 echo -e "По умолчанию используется: \e[1;36miptables\e[0m"
-                echo -e "\e[2m(Можно изменить в /opt/zapret/config)\e[0m"
+                echo -e "\e[2m(Можно изменить в $ZAPRET_DIR/config)\e[0m"
                 echo -e "⏳ Продолжаю через 5 секунд..."
                 FWTYPE="iptables"
                 sleep 5
@@ -77,7 +77,7 @@ get_fwtype() {
         *)
             echo -e "\e[1;31m❌ Неизвестная система: $UNAME\e[0m"
             echo -e "По умолчанию используется: \e[1;36miptables\e[0m"
-            echo -e "\e[2m(Можно изменить в /opt/zapret/config)\e[0m"
+            echo -e "\e[2m(Можно изменить в $ZAPRET_DIR/config)\e[0m"
             echo -e "⏳ Продолжаю через 5 секунд..."
             FWTYPE="iptables"
             sleep 5
@@ -87,11 +87,11 @@ get_fwtype() {
 
 cur_conf() {
     cr_cnf="неизвестно"
-    if [[ -f /opt/zapret/config ]]; then
+    if [[ -f $ZAPRET_DIR/config ]]; then
         TEMP_CUR_STR=$(mktemp -d)
-        cp -r /opt/zapret/config $TEMP_CUR_STR/config
+        cp -r $ZAPRET_DIR/config $TEMP_CUR_STR/config
         sed -i "s/^FWTYPE=.*/FWTYPE=iptables/" $TEMP_CUR_STR/config
-        for file in /opt/zapret/zapret.cfgs/configurations/*; do
+        for file in $ZAPRET_DIR/zapret.cfgs/configurations/*; do
             if [[ -f "$file" && "$(sha256sum "$file" | awk '{print $1}')" == "$(sha256sum $TEMP_CUR_STR/config | awk '{print $1}')" ]]; then
                 cr_cnf="$(basename "$file")"
                 break
@@ -102,9 +102,9 @@ cur_conf() {
 
 cur_list() {
     cr_lst="неизвестно"
-    if [[ -f /opt/zapret/config ]]; then
-        for file in /opt/zapret/zapret.cfgs/lists/*; do
-            if [[ -f "$file" && "$(sha256sum "$file" | awk '{print $1}')" == "$(sha256sum /opt/zapret/ipset/zapret-hosts-user.txt | awk '{print $1}')" ]]; then
+    if [[ -f $ZAPRET_DIR/config ]]; then
+        for file in $ZAPRET_DIR/zapret.cfgs/lists/*; do
+            if [[ -f "$file" && "$(sha256sum "$file" | awk '{print $1}')" == "$(sha256sum $ZAPRET_DIR/ipset/zapret-hosts-user.txt | awk '{print $1}')" ]]; then
                 cr_lst="$(basename "$file")"
                 break
             fi
@@ -112,11 +112,11 @@ cur_list() {
     fi
 }
 game_mode_check() {
-    if [ ! -f "/opt/zapret/ipset/ipset-game.txt" ]; then
-        touch /opt/zapret/ipset/ipset-game.txt || error_exit "не удалось создать ipset для игрвого режима"
+    if [ ! -f "$ZAPRET_DIR/ipset/ipset-game.txt" ]; then
+        touch $ZAPRET_DIR/ipset/ipset-game.txt || error_exit "не удалось создать ipset для игрвого режима"
     fi
     
-    if grep -q "^0\.0\.0\.0/0$" /opt/zapret/ipset/ipset-game.txt; then
+    if grep -q "^0\.0\.0\.0/0$" $ZAPRET_DIR/ipset/ipset-game.txt; then
         game_mode_status="включен"
     else
         game_mode_status="выключен"
@@ -127,31 +127,31 @@ toggle_game_mode() {
     game_mode_check
     
     if [[ $game_mode_status == "включен" ]]; then
-        rm -f /opt/zapret/ipset/ipset-game.txt
-        touch /opt/zapret/ipset/ipset-game.txt || error_exit "не удалось создать ipset для игрвого режима"
-        echo "203.0.113.77" >> /opt/zapret/ipset/ipset-game.txt
+        rm -f $ZAPRET_DIR/ipset/ipset-game.txt
+        touch $ZAPRET_DIR/ipset/ipset-game.txt || error_exit "не удалось создать ipset для игрвого режима"
+        echo "203.0.113.77" >> $ZAPRET_DIR/ipset/ipset-game.txt
     else
-        rm -f /opt/zapret/ipset/ipset-game.txt
-        touch /opt/zapret/ipset/ipset-game.txt || error_exit "не удалось создать ipset для игрвого режима"
-        echo "0.0.0.0/0" >> /opt/zapret/ipset/ipset-game.txt
+        rm -f $ZAPRET_DIR/ipset/ipset-game.txt
+        touch $ZAPRET_DIR/ipset/ipset-game.txt || error_exit "не удалось создать ipset для игрвого режима"
+        echo "0.0.0.0/0" >> $ZAPRET_DIR/ipset/ipset-game.txt
     fi
     manage_service restart
     sleep 2
 }
 
 configure_zapret_conf() {
-    if [[ ! -d /opt/zapret/zapret.cfgs ]]; then
+    if [[ ! -d $ZAPRET_DIR/zapret.cfgs ]]; then
         echo -e "\e[35mКлонирую конфигурации...\e[0m"
         manage_service stop
-        git clone https://github.com/Snowy-Fluffy/zapret.cfgs /opt/zapret/zapret.cfgs
+        git clone https://github.com/Snowy-Fluffy/zapret.cfgs $ZAPRET_DIR/zapret.cfgs
         echo -e "\e[32mКлонирование успешно завершено.\e[0m"
         manage_service start
         sleep 2
     fi
-    if [[ -d /opt/zapret/zapret.cfgs ]]; then
+    if [[ -d $ZAPRET_DIR/zapret.cfgs ]]; then
         echo "Проверяю наличие на обновление конфигураций..."
         manage_service stop 
-        cd /opt/zapret.installer && git fetch origin && git checkout -B main origin/main && git reset --hard origin/main
+        cd $INSTALLER_DIR && git fetch origin && git checkout -B main origin/main && git reset --hard origin/main
         manage_service start
         sleep 2
     fi
@@ -161,13 +161,13 @@ configure_zapret_conf() {
     echo "Выберите стратегию (можно поменять в любой момент, запустив Меню управления запретом еще раз):"
     PS3="Введите номер стратегии (по умолчанию 'general'): "
 
-    select CONF in $(for f in /opt/zapret/zapret.cfgs/configurations/*; do echo "$(basename "$f" | tr ' ' '.')"; done) "Отмена"; do
+    select CONF in $(for f in $ZAPRET_DIR/zapret.cfgs/configurations/*; do echo "$(basename "$f" | tr ' ' '.')"; done) "Отмена"; do
         if [[ "$CONF" == "Отмена" ]]; then
             main_menu
         elif [[ -n "$CONF" ]]; then
-            CONFIG_PATH="/opt/zapret/zapret.cfgs/configurations/${CONF//./ }"
-            rm -f /opt/zapret/config
-            cp "$CONFIG_PATH" /opt/zapret/config || error_exit "не удалось скопировать стратегию"
+            CONFIG_PATH="$ZAPRET_DIR/zapret.cfgs/configurations/${CONF//./ }"
+            rm -f $ZAPRET_DIR/config
+            cp "$CONFIG_PATH" $ZAPRET_DIR/config || error_exit "не удалось скопировать стратегию"
             echo "Стратегия '$CONF' установлена."
 
             sleep 2
@@ -178,24 +178,24 @@ configure_zapret_conf() {
     done
 
     get_fwtype
-    sed -i "s/^FWTYPE=.*/FWTYPE=$FWTYPE/" /opt/zapret/config
+    sed -i "s/^FWTYPE=.*/FWTYPE=$FWTYPE/" $ZAPRET_DIR/config
     manage_service restart
     main_menu
 }
 
 configure_zapret_list() {
-    if [[ ! -d /opt/zapret/zapret.cfgs ]]; then
+    if [[ ! -d $ZAPRET_DIR/zapret.cfgs ]]; then
         echo -e "\e[35mКлонирую конфигурации...\e[0m"
         manage_service stop
-        git clone https://github.com/Snowy-Fluffy/zapret.cfgs /opt/zapret/zapret.cfgs
+        git clone https://github.com/Snowy-Fluffy/zapret.cfgs $ZAPRET_DIR/zapret.cfgs
         manage_service start
         echo -e "\e[32mКлонирование успешно завершено.\e[0m"
         sleep 2
     fi
-    if [[ -d /opt/zapret/zapret.cfgs ]]; then
+    if [[ -d $ZAPRET_DIR/zapret.cfgs ]]; then
         echo "Проверяю наличие на обновление конфигураций..."
         manage_service stop
-        cd /opt/zapret.installer && git fetch origin && git checkout -B main origin/main && git reset --hard origin/main
+        cd $INSTALLER_DIR && git fetch origin && git checkout -B main origin/main && git reset --hard origin/main
         manage_service start
         sleep 2
     fi
@@ -205,13 +205,13 @@ configure_zapret_list() {
     echo -e "\e[36mВыберите хостлист (можно поменять в любой момент, запустив Меню управления запретом еще раз):\e[0m"
     PS3="Введите номер листа (по умолчанию 'list-basic.txt'): "
 
-    select LIST in $(for f in /opt/zapret/zapret.cfgs/lists/list*; do echo "$(basename "$f")"; done) "Отмена"; do
+    select LIST in $(for f in $ZAPRET_DIR/zapret.cfgs/lists/list*; do echo "$(basename "$f")"; done) "Отмена"; do
         if [[ "$LIST" == "Отмена" ]]; then
             main_menu
         elif [[ -n "$LIST" ]]; then
-            LIST_PATH="/opt/zapret/zapret.cfgs/lists/$LIST"
-            rm -f /opt/zapret/ipset/zapret-hosts-user.txt
-            cp "$LIST_PATH" /opt/zapret/ipset/zapret-hosts-user.txt || error_exit "не удалось скопировать хостлист"
+            LIST_PATH="$ZAPRET_DIR/zapret.cfgs/lists/$LIST"
+            rm -f $ZAPRET_DIR/ipset/zapret-hosts-user.txt
+            cp "$LIST_PATH" $ZAPRET_DIR/ipset/zapret-hosts-user.txt || error_exit "не удалось скопировать хостлист"
             echo -e "\e[32mХостлист '$LIST' установлен.\e[0m"
 
             sleep 2
@@ -239,10 +239,10 @@ configure_custom_conf_path() {
     fi
 
     manage_service stop
-    rm -f /opt/zapret/config
-    cp -r -- "$CONFIG_PATH" /opt/zapret/config || error_exit "не удалось скопировать стратегию из указанного пути"
+    rm -f $ZAPRET_DIR/config
+    cp -r -- "$CONFIG_PATH" $ZAPRET_DIR/config || error_exit "не удалось скопировать стратегию из указанного пути"
     get_fwtype
-    sed -i "s/^FWTYPE=.*/FWTYPE=$FWTYPE/" /opt/zapret/config
+    sed -i "s/^FWTYPE=.*/FWTYPE=$FWTYPE/" $ZAPRET_DIR/config
     echo -e "\e[32mСтратегия установлена из: $CONFIG_PATH\e[0m"
     manage_service start
     sleep 2
@@ -264,8 +264,8 @@ configure_custom_list_path() {
     fi
 
     manage_service stop
-    rm -f /opt/zapret/ipset/zapret-hosts-user.txt
-    cp -r -- "$LIST_PATH" /opt/zapret/ipset/zapret-hosts-user.txt || error_exit "не удалось скопировать хостлист из указанного пути"
+    rm -f $ZAPRET_DIR/ipset/zapret-hosts-user.txt
+    cp -r -- "$LIST_PATH" $ZAPRET_DIR/ipset/zapret-hosts-user.txt || error_exit "не удалось скопировать хостлист из указанного пути"
     echo -e "\e[32mХостлист установлен из: $LIST_PATH\e[0m"
     manage_service start
     sleep 2
@@ -283,8 +283,8 @@ add_to_zapret() {
 
     for address in "${ADDRESSES[@]}"; do
         address=$(echo "$address" | xargs)
-        if [[ -n "$address" && ! $(grep -Fxq "$address" "/opt/zapret/ipset/zapret-hosts-user.txt") ]]; then
-            echo "$address" >> "/opt/zapret/ipset/zapret-hosts-user.txt"
+        if [[ -n "$address" && ! $(grep -Fxq "$address" "$ZAPRET_DIR/ipset/zapret-hosts-user.txt") ]]; then
+            echo "$address" >> "$ZAPRET_DIR/ipset/zapret-hosts-user.txt"
             echo "Добавлено: $address"
         else
             echo "Уже существует: $address"
@@ -307,8 +307,8 @@ add_to_zapret_exc() {
 
     for address in "${ADDRESSES[@]}"; do
         address=$(echo "$address" | xargs)
-        if [[ -n "$address" && ! $(grep -Fxq "$address" "/opt/zapret/ipset/zapret-hosts-user-exclude.txt") ]]; then
-            echo "$address" >> "/opt/zapret/ipset/zapret-hosts-user-exclude.txt"
+        if [[ -n "$address" && ! $(grep -Fxq "$address" "$ZAPRET_DIR/ipset/zapret-hosts-user-exclude.txt") ]]; then
+            echo "$address" >> "$ZAPRET_DIR/ipset/zapret-hosts-user-exclude.txt"
             echo "Добавлено: $address"
         else
             echo "Уже существует: $address"
@@ -321,28 +321,28 @@ add_to_zapret_exc() {
     main_menu
 }
 edit_cust_list() {
-    if [ -e "/opt/zapret/zapret.cfgs/lists/list-custom.txt" ]; then
-        open_editor /opt/zapret/zapret.cfgs/lists/list-custom.txt
+    if [ -e "$ZAPRET_DIR/zapret.cfgs/lists/list-custom.txt" ]; then
+        open_editor $ZAPRET_DIR/zapret.cfgs/lists/list-custom.txt
         echo "Хостлист был отредактирован"
         sleep 3
         main_menu
     else
-        touch /opt/zapret/zapret.cfgs/lists/list-custom.txt
-        open_editor /opt/zapret/zapret.cfgs/lists/list-custom.txt
+        touch $ZAPRET_DIR/zapret.cfgs/lists/list-custom.txt
+        open_editor $ZAPRET_DIR/zapret.cfgs/lists/list-custom.txt
         echo "Хостлист был отредактирован"
         sleep 3
         main_menu
     fi
 }
 edit_cust_conf() {
-    if [ -e "/opt/zapret/zapret.cfgs/configurations/conf-custom" ]; then
-        open_editor /opt/zapret/zapret.cfgs/configurations/conf-custom
+    if [ -e "$ZAPRET_DIR/zapret.cfgs/configurations/conf-custom" ]; then
+        open_editor $ZAPRET_DIR/zapret.cfgs/configurations/conf-custom
         echo "Стратегия была отредактирован"
         sleep 3
         main_menu
     else
-        cp -r /opt/zapret/config.default /opt/zapret/zapret.cfgs/configurations/conf-custom 
-        open_editor /opt/zapret/zapret.cfgs/configurations/conf-custom
+        cp -r $ZAPRET_DIR/config.default $ZAPRET_DIR/zapret.cfgs/configurations/conf-custom 
+        open_editor $ZAPRET_DIR/zapret.cfgs/configurations/conf-custom
         echo "Стратегия была отредактирован"
         sleep 3
         main_menu
@@ -363,8 +363,8 @@ delete_from_zapret() {
     for address in "${ADDRESSES[@]}"; do
         address=$(echo "$address" | xargs)
         if [[ -n "$address" ]]; then
-            if grep -Fxq "$address" "/opt/zapret/ipset/zapret-hosts-user.txt"; then
-                sed -i "\|^$address\$|d" "/opt/zapret/ipset/zapret-hosts-user.txt"
+            if grep -Fxq "$address" "$ZAPRET_DIR/ipset/zapret-hosts-user.txt"; then
+                sed -i "\|^$address\$|d" "$ZAPRET_DIR/ipset/zapret-hosts-user.txt"
                 echo "Удалено: $address"
             else
                 echo "Не найдено: $address"
@@ -391,7 +391,7 @@ search_in_zapret() {
     echo "🔍 Результаты поиска по запросу: $keyword"
     echo "----------------------------------------"
 
-    if grep -i --color=never -F "$keyword" "/opt/zapret/ipset/zapret-hosts-user.txt"; then
+    if grep -i --color=never -F "$keyword" "$ZAPRET_DIR/ipset/zapret-hosts-user.txt"; then
         echo "----------------------------------------"
         read -rp "Нажмите Enter для продолжения..."
     else
@@ -414,8 +414,8 @@ delete_from_zapret_exc() {
     for address in "${ADDRESSES[@]}"; do
         address=$(echo "$address" | xargs)
         if [[ -n "$address" ]]; then
-            if grep -Fxq "$address" "/opt/zapret/ipset/zapret-hosts-user-exclude.txt"; then
-                sed -i "\|^$address\$|d" "/opt/zapret/ipset/zapret-hosts-user-exclude.txt"
+            if grep -Fxq "$address" "$ZAPRET_DIR/ipset/zapret-hosts-user-exclude.txt"; then
+                sed -i "\|^$address\$|d" "$ZAPRET_DIR/ipset/zapret-hosts-user-exclude.txt"
                 echo "Удалено: $address"
             else
                 echo "Не найдено: $address"
@@ -442,7 +442,7 @@ search_in_zapret_exc() {
     echo "🔍 Результаты поиска по запросу: $keyword"
     echo "----------------------------------------"
 
-    if grep -i --color=never -F "$keyword" "/opt/zapret/ipset/zapret-hosts-user-exclude.txt"; then
+    if grep -i --color=never -F "$keyword" "$ZAPRET_DIR/ipset/zapret-hosts-user-exclude.txt"; then
         echo "----------------------------------------"
         read -rp "Нажмите Enter для продолжения..."
     else
@@ -578,27 +578,27 @@ test_all_domains() {
 apply_config() {
     local config="$1"
     echo -e "\e[33mПрименяем стратегию: $config\e[0m"
-    CONFIG_PATH="/opt/zapret/zapret.cfgs/configurations/$config"
+    CONFIG_PATH="$ZAPRET_DIR/zapret.cfgs/configurations/$config"
     if [[ ! -f "$CONFIG_PATH" ]]; then
         echo -e "\e[31mФайл конфигурации не найден: $CONFIG_PATH\e[0m"
     fi
-    rm -f /opt/zapret/config
-    cp "$CONFIG_PATH" /opt/zapret/config || error_exit "не удалось скопировать стратегию"
+    rm -f $ZAPRET_DIR/config
+    cp "$CONFIG_PATH" $ZAPRET_DIR/config || error_exit "не удалось скопировать стратегию"
     get_fwtype
-    sed -i "s/^FWTYPE=.*/FWTYPE=$FWTYPE/" /opt/zapret/config
+    sed -i "s/^FWTYPE=.*/FWTYPE=$FWTYPE/" $ZAPRET_DIR/config
     manage_service restart
 }
 
 check_conf() {
     echo -e "\e[36mВыберите хостлист для тестирования (можно поменять в любой момент, запустив Меню управления запретом еще раз):\e[0m"
     PS3="Введите номер листа (по умолчанию для тестирования 'list-simple.txt'): "
-    select LIST in $(for f in /opt/zapret/zapret.cfgs/lists/list*; do echo "$(basename "$f")"; done) "Отмена"; do
+    select LIST in $(for f in $ZAPRET_DIR/zapret.cfgs/lists/list*; do echo "$(basename "$f")"; done) "Отмена"; do
         if [[ "$LIST" == "Отмена" ]]; then
             main_menu
         elif [[ -n "$LIST" ]]; then
-            LIST_PATH="/opt/zapret/zapret.cfgs/lists/$LIST"
-            rm -f /opt/zapret/ipset/zapret-hosts-user.txt
-            cp "$LIST_PATH" /opt/zapret/ipset/zapret-hosts-user.txt || error_exit "не удалось скопировать хостлист"
+            LIST_PATH="$ZAPRET_DIR/zapret.cfgs/lists/$LIST"
+            rm -f $ZAPRET_DIR/ipset/zapret-hosts-user.txt
+            cp "$LIST_PATH" $ZAPRET_DIR/ipset/zapret-hosts-user.txt || error_exit "не удалось скопировать хостлист"
             echo -e "\e[32mХостлист '$LIST' установлен.\e[0m"
             sleep 2
             break
@@ -614,7 +614,7 @@ check_conf() {
     echo -e "\e[33mМожно выбрать несколько стратегий через пробел или тире (например: '1 3 5' или '1-5' или '1-3 5 7-9')\e[0m"
     echo ""
     
-    all_configs=($(for f in /opt/zapret/zapret.cfgs/configurations/*; do basename "$f" | tr ' ' '.'; done))
+    all_configs=($(for f in $ZAPRET_DIR/zapret.cfgs/configurations/*; do basename "$f" | tr ' ' '.'; done))
     
     if [[ ${#all_configs[@]} -eq 0 ]]; then
         error_exit "\e[31mНет доступных стратегий для проверки\e[0m"
@@ -772,9 +772,9 @@ check_conf() {
     sleep 1
 }
 check_list() {
-    LINE_COUNT=$(wc -l < "/opt/zapret/ipset/zapret-hosts-user.txt" 2>/dev/null || echo "0")
-    if [ "$LINE_COUNT" = "0" ] && [ -s "/opt/zapret/ipset/zapret-hosts-user.txt" ]; then
-        LINE_COUNT=$(awk 'END{print NR}' "/opt/zapret/ipset/zapret-hosts-user.txt" 2>/dev/null || echo "0")
+    LINE_COUNT=$(wc -l < "$ZAPRET_DIR/ipset/zapret-hosts-user.txt" 2>/dev/null || echo "0")
+    if [ "$LINE_COUNT" = "0" ] && [ -s "$ZAPRET_DIR/ipset/zapret-hosts-user.txt" ]; then
+        LINE_COUNT=$(awk 'END{print NR}' "$ZAPRET_DIR/ipset/zapret-hosts-user.txt" 2>/dev/null || echo "0")
     fi
     if ! [[ "$LINE_COUNT" =~ ^[0-9]+$ ]]; then
         echo "Ошибка: Не удалось подсчитать строки в файле"

@@ -21,6 +21,7 @@ install_dependencies() {
                 openwrt)   echo "$SUDO opkg update && $SUDO opkg install git git-http bash" ;;
                 altlinux)  echo "$SUDO apt-get update -y && $SUDO apt-get install -y git bash" ;;
                 alpine)    echo "$SUDO apk update && $SUDO apk add git bash" ;;
+                nixos)     echo "" ;;  # git is available via nix-shell; skip
                 *)         echo "" ;;
             esac
         }
@@ -34,7 +35,7 @@ install_dependencies() {
 
         if [ -n "$install_cmd" ]; then
             eval "$install_cmd"
-        else
+        elif [ "${ID:-}" != "nixos" ]; then
             echo "Неизвестная ОС: ${ID:-Неизвестно}"
             echo "Установите git и bash самостоятельно."
             sleep 2
@@ -67,21 +68,45 @@ else
     fi
 fi
 
+# Detect NixOS and choose the installer directory accordingly.
+OS_ID=""
+[ -f /etc/os-release ] && OS_ID=$(. /etc/os-release && echo "${ID:-}")
+
+if [ "$OS_ID" = "nixos" ]; then
+    INSTALLER_DIR="/var/lib/zapret.installer"
+else
+    INSTALLER_DIR="/opt/zapret.installer"
+fi
+
 if ! command -v git > /dev/null 2>&1; then
+    if [ "$OS_ID" = "nixos" ]; then
+        echo "git не найден. На NixOS выполните:"
+        echo "  nix-shell -p git --run 'sh -c \"\$(curl -fsSL <url>)\"'"
+        echo "или добавьте git в environment.systemPackages и повторите."
+        exit 1
+    fi
     install_dependencies
 fi
 
-if [ ! -d "/opt/zapret.installer" ]; then
-    $SUDO git clone https://github.com/Snowy-Fluffy/zapret.installer.git /opt/zapret.installer
+# Resolve the directory that contains this installer.sh.
+# POSIX sh does not have BASH_SOURCE, so we use $0.
+SELF_DIR=$(cd "$(dirname "$0")" && pwd)
+
+if [ -f "$SELF_DIR/zapret-control.sh" ]; then
+    # Running from inside the repo — use it in place; no copy needed.
+    INSTALLER_DIR="$SELF_DIR"
 else
-    cd /opt/zapret.installer || exit
-    if ! $SUDO git pull; then
-        echo "Ошибка при обновлении. Удаляю репозиторий и клонирую заново..."
-        $SUDO rm -rf /opt/zapret.installer
-        $SUDO git clone https://github.com/Snowy-Fluffy/zapret.installer.git /opt/zapret.installer
+    # Running via curl | sh — clone or update from the remote.
+    if [ ! -d "$INSTALLER_DIR" ]; then
+        $SUDO git clone https://github.com/kira-we1ss/zapret.installer-nix.git "$INSTALLER_DIR"
+    else
+        if ! (cd "$INSTALLER_DIR" && $SUDO git pull); then
+            echo "Ошибка при обновлении. Удаляю репозиторий и клонирую заново..."
+            $SUDO rm -rf "$INSTALLER_DIR"
+            $SUDO git clone https://github.com/kira-we1ss/zapret.installer-nix.git "$INSTALLER_DIR"
+        fi
     fi
 fi
 
-$SUDO chmod +x /opt/zapret.installer/zapret-control.sh
-exec bash /opt/zapret.installer/zapret-control.sh
-
+chmod +x "$INSTALLER_DIR/zapret-control.sh"
+exec bash "$INSTALLER_DIR/zapret-control.sh"
