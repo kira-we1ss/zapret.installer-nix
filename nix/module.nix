@@ -5,9 +5,20 @@ let
 
   defaultPackage = throw ''
     services.zapret.package is not set.
-    Use the flake:
-      inputs.zapret.url = "github:kira-we1ss/zapret.installer-nix";
-    then add zapret.nixosModules.default to your modules list.
+
+    Flake users: add zapret.nixosModules.default to your modules list —
+    the package is set automatically.
+
+    Channel users: set services.zapret.package explicitly, e.g.:
+      services.zapret.package = pkgs.callPackage ./zapret-package.nix {
+        zapret-src = pkgs.fetchFromGitHub {
+          owner = "bol-van";
+          repo  = "zapret";
+          rev   = "<pinned-commit-sha>";
+          hash  = "sha256-...";
+        };
+      };
+    See README.md for full channel installation instructions.
   '';
 
   stateDir = "/var/lib/zapret";

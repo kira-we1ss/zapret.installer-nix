@@ -18,6 +18,63 @@ sh -c "$(curl -fsSL https://raw.githubusercontent.com/Snowy-Fluffy/zapret.instal
 ```
 Добавляет модуль для zapret в вашу директорию конфигурации, для полноценной установки следуйте инструкциям установщика. Если вы используете flakes то перед ребилдом конфигурации обновите flake.lock.
 
+### NixOS
+
+**Flake (рекомендуется):**
+
+`flake.nix`:
+```nix
+inputs.zapret.url = "github:kira-we1ss/zapret.installer-nix";
+
+outputs = { self, nixpkgs, zapret, ... }: {
+  nixosConfigurations.myhostname = nixpkgs.lib.nixosSystem {
+    modules = [
+      zapret.nixosModules.default
+      ./configuration.nix
+    ];
+  };
+};
+```
+
+`configuration.nix`:
+```nix
+services.zapret.enable = true;
+```
+
+**Без flake (стандартные каналы NixOS):**
+
+1. Клонировать репозиторий установщика (однократно, вне управления Nix):
+   ```bash
+   git clone https://github.com/kira-we1ss/zapret.installer-nix /var/lib/zapret.installer
+   ```
+2. Скопировать Nix-файлы в `/etc/nixos/`:
+   ```bash
+   cp /var/lib/zapret.installer/nix/module.nix  /etc/nixos/zapret-module.nix
+   cp /var/lib/zapret.installer/nix/package.nix /etc/nixos/zapret-package.nix
+   ```
+3. В `configuration.nix`:
+   ```nix
+   imports = [ ./zapret-module.nix ];
+
+   services.zapret.enable = true;
+   services.zapret.package = pkgs.callPackage ./zapret-package.nix {
+     zapret-src = pkgs.fetchFromGitHub {
+       owner = "bol-van";
+       repo  = "zapret";
+       rev   = "<pinned-commit-sha>";  # конкретный коммит, не "master"
+       hash  = "sha256-...";
+     };
+   };
+   # installerSrc по умолчанию /var/lib/zapret.installer — совпадает с путём клона выше
+   ```
+   Получить актуальный `rev` и `hash`:
+   ```bash
+   # rev:
+   git ls-remote https://github.com/bol-van/zapret HEAD | cut -f1
+   # hash:
+   nix-prefetch-url --unpack https://github.com/bol-van/zapret/archive/<rev>.tar.gz
+   ```
+
 Вызов панели управления:  
 ```bash
 zapret
