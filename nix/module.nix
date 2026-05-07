@@ -116,6 +116,7 @@ in {
       path = [
         pkgs.ipset pkgs.iptables pkgs.iproute2 pkgs.bash
         pkgs.nftables pkgs.coreutils pkgs.gnused pkgs.gawk
+        pkgs.procps pkgs.kmod
       ];
 
       serviceConfig = {
@@ -136,6 +137,7 @@ in {
           . "$TMPCONF"
           . "$ZAPRET_BASE/common/base.sh"
           . "$ZAPRET_BASE/common/fwtype.sh"
+          . "$ZAPRET_BASE/common/custom.sh"
           . "$ZAPRET_BASE/common/ipt.sh"
           . "$ZAPRET_BASE/common/nft.sh"
           . "$ZAPRET_BASE/common/linux_iphelper.sh"
@@ -207,6 +209,7 @@ in {
           . "$TMPCONF"
           . "$ZAPRET_BASE/common/base.sh"
           . "$ZAPRET_BASE/common/fwtype.sh"
+          . "$ZAPRET_BASE/common/custom.sh"
           . "$ZAPRET_BASE/common/ipt.sh"
           . "$ZAPRET_BASE/common/nft.sh"
           . "$ZAPRET_BASE/common/linux_iphelper.sh"
