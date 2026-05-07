@@ -222,23 +222,14 @@ in {
         '';
 
         ExecStopPost = pkgs.writeShellScript "zapret-fw-stop" ''
-          CONFIG=${stateDir}/config
-          [ -f "$CONFIG" ] || exit 0
-          TMPCONF=$(mktemp)
-          ${patchConf} "$CONFIG" > "$TMPCONF"
-          . "$TMPCONF"
-          rm -f "$TMPCONF"
-
-          if [ "''${FWTYPE:-nftables}" = "nftables" ]; then
-            nft delete table inet zapret 2>/dev/null || true
-          else
-            iptables  -t mangle -D POSTROUTING -j ZAPRET 2>/dev/null || true
-            ip6tables -t mangle -D POSTROUTING -j ZAPRET 2>/dev/null || true
-            iptables  -t mangle -F ZAPRET 2>/dev/null || true
-            ip6tables -t mangle -F ZAPRET 2>/dev/null || true
-            iptables  -t mangle -X ZAPRET 2>/dev/null || true
-            ip6tables -t mangle -X ZAPRET 2>/dev/null || true
-          fi
+          # Always clean both backends — FWTYPE may have changed since last start
+          nft delete table inet zapret 2>/dev/null || true
+          iptables  -t mangle -D POSTROUTING -j ZAPRET 2>/dev/null || true
+          ip6tables -t mangle -D POSTROUTING -j ZAPRET 2>/dev/null || true
+          iptables  -t mangle -F ZAPRET 2>/dev/null || true
+          ip6tables -t mangle -F ZAPRET 2>/dev/null || true
+          iptables  -t mangle -X ZAPRET 2>/dev/null || true
+          ip6tables -t mangle -X ZAPRET 2>/dev/null || true
         '';
 
         Restart    = "on-failure";
