@@ -17,6 +17,14 @@ let
     exec bash "${cfg.installerSrc}/zapret-control.sh" "$@"
   '';
 
+  patchConf = pkgs.writeShellScript "zapret-patch-conf" ''
+    sed \
+      -e 's|/opt/zapret/files/fake/|${cfg.package}/share/zapret/fake/|g' \
+      -e 's|/opt/zapret/ipset/|${stateDir}/ipset/|g' \
+      -e 's|/opt/zapret/|${stateDir}/|g' \
+      "$1"
+  '';
+
 in {
   disabledModules = [ "services/networking/zapret.nix" ];
 
@@ -65,6 +73,7 @@ in {
       cfg.package
       pkgs.ipset
       pkgs.iptables
+      pkgs.nftables
       zapretCmd
     ];
 
@@ -122,47 +131,50 @@ in {
       serviceConfig = {
         Type           = "simple";
         StateDirectory = "zapret";
+
         ExecStartPre = pkgs.writeShellScript "zapret-fw-start" ''
           CONFIG=${stateDir}/config
           [ -f "$CONFIG" ] || exit 0
-
           TMPCONF=$(mktemp)
-          sed \
-            -e 's|/opt/zapret/files/fake/|${cfg.package}/share/zapret/fake/|g' \
-            -e 's|/opt/zapret/ipset/|${stateDir}/ipset/|g' \
-            -e 's|/opt/zapret/|${stateDir}/|g' \
-            "$CONFIG" > "$TMPCONF"
-
-          ZAPRET_BASE=${cfg.package}/share/zapret
+          ${patchConf} "$CONFIG" > "$TMPCONF"
           . "$TMPCONF"
-          . "$ZAPRET_BASE/common/base.sh"
-          . "$ZAPRET_BASE/common/fwtype.sh"
-          . "$ZAPRET_BASE/common/custom.sh"
-          . "$ZAPRET_BASE/common/ipt.sh"
-          . "$ZAPRET_BASE/common/nft.sh"
-          . "$ZAPRET_BASE/common/linux_iphelper.sh"
-          . "$ZAPRET_BASE/common/linux_fw.sh"
-
-          IPSET_DIR=${stateDir}/ipset
-          ZAPRET_IP_IFACE_INCLUDE=""
-          create_ipset() { return 0; }
-
-          zapret_do_firewall 1
           rm -f "$TMPCONF"
+          QNUM="''${QNUM:-200}"
+
+          if [ "''${FWTYPE:-nftables}" = "nftables" ]; then
+            nft add table inet zapret 2>/dev/null || true
+            nft add chain inet zapret postrouting '{ type filter hook postrouting priority mangle; }' 2>/dev/null || true
+            nft add chain inet zapret prerouting  '{ type filter hook prerouting  priority mangle; }' 2>/dev/null || true
+            if [ -n "''${NFQWS_PORTS_TCP:-}" ]; then
+              nft add rule inet zapret postrouting tcp dport "{ ''${NFQWS_PORTS_TCP} }" ct original packets 1-"''${NFQWS_TCP_PKT_OUT:-6}" queue num "$QNUM" bypass 2>/dev/null || true
+            fi
+            if [ -n "''${NFQWS_PORTS_UDP:-}" ]; then
+              nft add rule inet zapret postrouting udp dport "{ ''${NFQWS_PORTS_UDP} }" ct original packets 1-"''${NFQWS_UDP_PKT_OUT:-6}" queue num "$QNUM" bypass 2>/dev/null || true
+            fi
+          else
+            iptables  -t mangle -N ZAPRET 2>/dev/null || iptables  -t mangle -F ZAPRET
+            ip6tables -t mangle -N ZAPRET 2>/dev/null || ip6tables -t mangle -F ZAPRET
+            if [ -n "''${NFQWS_PORTS_TCP:-}" ]; then
+              iptables  -t mangle -A ZAPRET -p tcp -m multiport --dports "''${NFQWS_PORTS_TCP}" -m connbytes --connbytes-dir=original --connbytes-mode=packets --connbytes 1:"''${NFQWS_TCP_PKT_OUT:-6}" -j NFQUEUE --queue-num "$QNUM" --queue-bypass
+              ip6tables -t mangle -A ZAPRET -p tcp -m multiport --dports "''${NFQWS_PORTS_TCP}" -m connbytes --connbytes-dir=original --connbytes-mode=packets --connbytes 1:"''${NFQWS_TCP_PKT_OUT:-6}" -j NFQUEUE --queue-num "$QNUM" --queue-bypass
+            fi
+            if [ -n "''${NFQWS_PORTS_UDP:-}" ]; then
+              iptables  -t mangle -A ZAPRET -p udp -m multiport --dports "''${NFQWS_PORTS_UDP}" -m connbytes --connbytes-dir=original --connbytes-mode=packets --connbytes 1:"''${NFQWS_UDP_PKT_OUT:-6}" -j NFQUEUE --queue-num "$QNUM" --queue-bypass
+              ip6tables -t mangle -A ZAPRET -p udp -m multiport --dports "''${NFQWS_PORTS_UDP}" -m connbytes --connbytes-dir=original --connbytes-mode=packets --connbytes 1:"''${NFQWS_UDP_PKT_OUT:-6}" -j NFQUEUE --queue-num "$QNUM" --queue-bypass
+            fi
+            iptables  -t mangle -A POSTROUTING -j ZAPRET
+            ip6tables -t mangle -A POSTROUTING -j ZAPRET
+          fi
         '';
+
         ExecStart = pkgs.writeShellScript "zapret-start" ''
           CONFIG=${stateDir}/config
           if [ ! -f "$CONFIG" ]; then
             echo "zapret: no config file found at $CONFIG" >&2
             exit 1
           fi
-
           TMPCONF=$(mktemp)
-          sed \
-            -e 's|/opt/zapret/files/fake/|${cfg.package}/share/zapret/fake/|g' \
-            -e 's|/opt/zapret/ipset/|${stateDir}/ipset/|g' \
-            -e 's|/opt/zapret/|${stateDir}/|g' \
-            "$CONFIG" > "$TMPCONF"
+          ${patchConf} "$CONFIG" > "$TMPCONF"
           . "$TMPCONF"
           rm -f "$TMPCONF"
 
@@ -194,30 +206,27 @@ in {
               ;;
           esac
         '';
+
         ExecStopPost = pkgs.writeShellScript "zapret-fw-stop" ''
           CONFIG=${stateDir}/config
           [ -f "$CONFIG" ] || exit 0
-
           TMPCONF=$(mktemp)
-          sed \
-            -e 's|/opt/zapret/files/fake/|${cfg.package}/share/zapret/fake/|g' \
-            -e 's|/opt/zapret/ipset/|${stateDir}/ipset/|g' \
-            -e 's|/opt/zapret/|${stateDir}/|g' \
-            "$CONFIG" > "$TMPCONF"
-
-          ZAPRET_BASE=${cfg.package}/share/zapret
+          ${patchConf} "$CONFIG" > "$TMPCONF"
           . "$TMPCONF"
-          . "$ZAPRET_BASE/common/base.sh"
-          . "$ZAPRET_BASE/common/fwtype.sh"
-          . "$ZAPRET_BASE/common/custom.sh"
-          . "$ZAPRET_BASE/common/ipt.sh"
-          . "$ZAPRET_BASE/common/nft.sh"
-          . "$ZAPRET_BASE/common/linux_iphelper.sh"
-          . "$ZAPRET_BASE/common/linux_fw.sh"
-
-          zapret_do_firewall 0
           rm -f "$TMPCONF"
+
+          if [ "''${FWTYPE:-nftables}" = "nftables" ]; then
+            nft delete table inet zapret 2>/dev/null || true
+          else
+            iptables  -t mangle -D POSTROUTING -j ZAPRET 2>/dev/null || true
+            ip6tables -t mangle -D POSTROUTING -j ZAPRET 2>/dev/null || true
+            iptables  -t mangle -F ZAPRET 2>/dev/null || true
+            ip6tables -t mangle -F ZAPRET 2>/dev/null || true
+            iptables  -t mangle -X ZAPRET 2>/dev/null || true
+            ip6tables -t mangle -X ZAPRET 2>/dev/null || true
+          fi
         '';
+
         Restart    = "on-failure";
         RestartSec = "5s";
       };
