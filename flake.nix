@@ -30,6 +30,7 @@
           config = lib.mkIf config.services.zapret.enable {
             services.zapret.package = lib.mkDefault autoPackage;
           };
+          _module.args.self = self;
         };
 
       nixosModules.zapret = self.nixosModules.default;

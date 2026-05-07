@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, self ? null, ... }:
 
 let
   cfg = config.services.zapret;
@@ -11,11 +11,12 @@ let
   '';
 
   stateDir = "/var/lib/zapret";
-  installerDir = "/var/lib/zapret.installer";
   fwtype = cfg.firewallType;
 
+  installerSrc = if self != null then self.outPath else "/var/lib/zapret.installer";
+
   zapretCmd = pkgs.writeShellScriptBin "zapret" ''
-    exec bash "${installerDir}/zapret-control.sh" "$@"
+    exec bash "${installerSrc}/zapret-control.sh" "$@"
   '';
 
 in {
@@ -109,18 +110,14 @@ in {
       wantedBy = [ "multi-user.target" ];
 
       serviceConfig = {
-        Type           = "forking";
+        Type           = "simple";
         StateDirectory = "zapret";
-        ExecStartPre = pkgs.writeShellScript "zapret-prestart" ''
+        ExecStart = pkgs.writeShellScript "zapret-start" ''
           CONFIG=${stateDir}/config
           if [ ! -f "$CONFIG" ]; then
             echo "zapret: no config file found at $CONFIG" >&2
-            exit 0
+            exit 1
           fi
-        '';
-        ExecStart = pkgs.writeShellScript "zapret-start" ''
-          CONFIG=${stateDir}/config
-          [ -f "$CONFIG" ] || exit 0
           . "$CONFIG"
 
           LISTS_DIR=${stateDir}/ipset
@@ -151,13 +148,8 @@ in {
               ;;
           esac
         '';
-        ExecStop = pkgs.writeShellScript "zapret-stop" ''
-          pkill -f nfqws || true
-          pkill -f tpws  || true
-        '';
-        RemainAfterExit = true;
-        Restart         = "on-failure";
-        RestartSec      = "5s";
+        Restart    = "on-failure";
+        RestartSec = "5s";
       };
     };
   };
