@@ -124,7 +124,15 @@ in {
             echo "zapret: no config file found at $CONFIG" >&2
             exit 1
           fi
-          . "$CONFIG"
+
+          TMPCONF=$(mktemp)
+          ${pkgs.gnused}/bin/sed \
+            -e 's|/opt/zapret/files/fake/|${cfg.package}/share/zapret/fake/|g' \
+            -e 's|/opt/zapret/ipset/|${stateDir}/ipset/|g' \
+            -e 's|/opt/zapret/|${stateDir}/|g' \
+            "$CONFIG" > "$TMPCONF"
+          . "$TMPCONF"
+          rm -f "$TMPCONF"
 
           LISTS_DIR=${stateDir}/ipset
           BINDIR=${cfg.package}/bin
