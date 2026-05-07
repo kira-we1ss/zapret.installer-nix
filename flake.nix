@@ -26,6 +26,7 @@
         let
           autoPackage = pkgs.callPackage ./nix/package.nix { inherit zapret-src; };
         in {
+          imports = [ ./nix/module.nix ];
           config = lib.mkIf config.services.zapret.enable {
             services.zapret.package = lib.mkDefault autoPackage;
           };
