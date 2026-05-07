@@ -150,8 +150,8 @@ configure_zapret_conf() {
     fi
     if [[ -d $ZAPRET_DIR/zapret.cfgs ]]; then
         echo "Проверяю наличие на обновление конфигураций..."
-        manage_service stop 
-        cd $INSTALLER_DIR && git fetch origin && git checkout -B main origin/main && git reset --hard origin/main
+        manage_service stop
+        cd $ZAPRET_DIR/zapret.cfgs && git fetch origin && git checkout -B main origin/main && git reset --hard origin/main
         manage_service start
         sleep 2
     fi
@@ -195,7 +195,7 @@ configure_zapret_list() {
     if [[ -d $ZAPRET_DIR/zapret.cfgs ]]; then
         echo "Проверяю наличие на обновление конфигураций..."
         manage_service stop
-        cd $INSTALLER_DIR && git fetch origin && git checkout -B main origin/main && git reset --hard origin/main
+        cd $ZAPRET_DIR/zapret.cfgs && git fetch origin && git checkout -B main origin/main && git reset --hard origin/main
         manage_service start
         sleep 2
     fi
@@ -335,13 +335,22 @@ edit_cust_list() {
     fi
 }
 edit_cust_conf() {
+    local default_conf
+    if [ -f "$ZAPRET_DIR/config.default" ]; then
+        default_conf="$ZAPRET_DIR/config.default"
+    elif [ -f "$ZAPRET_DIR/zapret.cfgs/configurations/general" ]; then
+        default_conf="$ZAPRET_DIR/zapret.cfgs/configurations/general"
+    else
+        default_conf="$ZAPRET_DIR/config"
+    fi
+
     if [ -e "$ZAPRET_DIR/zapret.cfgs/configurations/conf-custom" ]; then
         open_editor $ZAPRET_DIR/zapret.cfgs/configurations/conf-custom
         echo "Стратегия была отредактирован"
         sleep 3
         main_menu
     else
-        cp -r $ZAPRET_DIR/config.default $ZAPRET_DIR/zapret.cfgs/configurations/conf-custom 
+        cp -r "$default_conf" $ZAPRET_DIR/zapret.cfgs/configurations/conf-custom
         open_editor $ZAPRET_DIR/zapret.cfgs/configurations/conf-custom
         echo "Стратегия была отредактирован"
         sleep 3

@@ -11,7 +11,12 @@ let
   '';
 
   stateDir = "/var/lib/zapret";
+  installerDir = "/var/lib/zapret.installer";
   fwtype = cfg.firewallType;
+
+  zapretCmd = pkgs.writeShellScriptBin "zapret" ''
+    exec bash "${installerDir}/zapret-control.sh" "$@"
+  '';
 
 in {
   disabledModules = [ "services/networking/zapret.nix" ];
@@ -55,6 +60,7 @@ in {
       cfg.package
       pkgs.ipset
       pkgs.iptables
+      zapretCmd
     ];
 
     system.activationScripts.zapret = lib.stringAfter [ "users" "groups" ] ''
