@@ -6,6 +6,7 @@
 
 </div>
 
+
 Облегчает установку zapret для новичков и тех, кто не хочет разбираться в его работе.  
 Устанавливает [zapret из оффициального репозитория](https://github.com/bol-van/zapret), CLI панель управления и [репозиторий со стратегиями и списками доменов](https://github.com/Snowy-Fluffy/zapret.cfgs).
 
@@ -15,6 +16,7 @@
 ```bash
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/Snowy-Fluffy/zapret.installer/refs/heads/main/installer.sh)"
 ```
+Добавляет модуль для zapret в вашу директорию конфигурации, для полноценной установки следуйте инструкциям установщика. Если вы используете flakes то перед ребилдом конфигурации обновите flake.lock.
 
 Вызов панели управления:  
 ```bash
@@ -35,6 +37,7 @@ zapret
 - OpenSUSE
 - Aipline Linux
 - OpenWrt
+- NixOS
 
 > [!IMPORTANT]
 > На Openwrt также советую попробовать [zapret-openwrt](https://github.com/remittor/zapret-openwrt)
