@@ -2,6 +2,8 @@
 , stdenv
 , zapret-src
 , libnetfilter_queue
+, libnfnetlink
+, libmnl
 , libcap
 , zlib
 , openssl
@@ -21,6 +23,8 @@ stdenv.mkDerivation {
 
   buildInputs = [
     libnetfilter_queue
+    libnfnetlink
+    libmnl
     libcap
     zlib
     openssl
