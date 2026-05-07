@@ -25,12 +25,13 @@
       nixosModules.default = { config, pkgs, lib, ... }:
         let
           autoPackage = pkgs.callPackage ./nix/package.nix { inherit zapret-src; };
+          selfPath = self.outPath;
         in {
           imports = [ ./nix/module.nix ];
           config = lib.mkIf config.services.zapret.enable {
             services.zapret.package = lib.mkDefault autoPackage;
+            services.zapret.installerSrc = lib.mkDefault selfPath;
           };
-          _module.args.self = self;
         };
 
       nixosModules.zapret = self.nixosModules.default;

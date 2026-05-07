@@ -1,4 +1,4 @@
-{ config, pkgs, lib, self ? null, ... }:
+{ config, pkgs, lib, ... }:
 
 let
   cfg = config.services.zapret;
@@ -13,10 +13,8 @@ let
   stateDir = "/var/lib/zapret";
   fwtype = cfg.firewallType;
 
-  installerSrc = if self != null then self.outPath else "/var/lib/zapret.installer";
-
   zapretCmd = pkgs.writeShellScriptBin "zapret" ''
-    exec bash "${installerSrc}/zapret-control.sh" "$@"
+    exec bash "${cfg.installerSrc}/zapret-control.sh" "$@"
   '';
 
 in {
@@ -29,6 +27,12 @@ in {
       type        = lib.types.package;
       default     = defaultPackage;
       description = "The zapret package to use (nfqws/tpws binaries).";
+    };
+
+    installerSrc = lib.mkOption {
+      type        = lib.types.str;
+      default     = "/var/lib/zapret.installer";
+      description = "Path to the zapret installer repo. Set automatically by the flake to the Nix store path.";
     };
 
     firewallType = lib.mkOption {
