@@ -14,7 +14,7 @@
 
 Запуск скрипта установки (необходимо наличие *curl* в системе):  
 ```bash
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/Snowy-Fluffy/zapret.installer/refs/heads/main/installer.sh)"
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/kira-we1ss/zapret.installer-nix/refs/heads/main/installer.sh)"
 ```
 Добавляет модуль для zapret в вашу директорию конфигурации, для полноценной установки следуйте инструкциям установщика. Если вы используете flakes то перед ребилдом конфигурации обновите flake.lock.
 
