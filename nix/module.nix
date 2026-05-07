@@ -163,15 +163,18 @@ in {
               nft add rule inet zapret postrouting udp dport "{ ''${NFQWS_PORTS_UDP} }" ct original packets 1-"''${NFQWS_UDP_PKT_OUT:-6}" queue num "$QNUM" bypass 2>/dev/null || true
             fi
           else
+            # iptables multiport uses ':' for ranges, config uses '-' — convert
+            _tcp_ports=$(echo "''${NFQWS_PORTS_TCP:-}" | tr '-' ':' | sed 's/,\([0-9]\+\):\([0-9]\+\)/,\1:\2/g')
+            _udp_ports=$(echo "''${NFQWS_PORTS_UDP:-}" | tr '-' ':' | sed 's/,\([0-9]\+\):\([0-9]\+\)/,\1:\2/g')
             iptables  -t mangle -N ZAPRET 2>/dev/null || iptables  -t mangle -F ZAPRET
             ip6tables -t mangle -N ZAPRET 2>/dev/null || ip6tables -t mangle -F ZAPRET
             if [ -n "''${NFQWS_PORTS_TCP:-}" ]; then
-              iptables  -t mangle -A ZAPRET -p tcp -m multiport --dports "''${NFQWS_PORTS_TCP}" -m connbytes --connbytes-dir=original --connbytes-mode=packets --connbytes 1:"''${NFQWS_TCP_PKT_OUT:-6}" -j NFQUEUE --queue-num "$QNUM" --queue-bypass
-              ip6tables -t mangle -A ZAPRET -p tcp -m multiport --dports "''${NFQWS_PORTS_TCP}" -m connbytes --connbytes-dir=original --connbytes-mode=packets --connbytes 1:"''${NFQWS_TCP_PKT_OUT:-6}" -j NFQUEUE --queue-num "$QNUM" --queue-bypass
+              iptables  -t mangle -A ZAPRET -p tcp -m multiport --dports "$_tcp_ports" -m connbytes --connbytes-dir=original --connbytes-mode=packets --connbytes 1:"''${NFQWS_TCP_PKT_OUT:-6}" -j NFQUEUE --queue-num "$QNUM" --queue-bypass
+              ip6tables -t mangle -A ZAPRET -p tcp -m multiport --dports "$_tcp_ports" -m connbytes --connbytes-dir=original --connbytes-mode=packets --connbytes 1:"''${NFQWS_TCP_PKT_OUT:-6}" -j NFQUEUE --queue-num "$QNUM" --queue-bypass
             fi
             if [ -n "''${NFQWS_PORTS_UDP:-}" ]; then
-              iptables  -t mangle -A ZAPRET -p udp -m multiport --dports "''${NFQWS_PORTS_UDP}" -m connbytes --connbytes-dir=original --connbytes-mode=packets --connbytes 1:"''${NFQWS_UDP_PKT_OUT:-6}" -j NFQUEUE --queue-num "$QNUM" --queue-bypass
-              ip6tables -t mangle -A ZAPRET -p udp -m multiport --dports "''${NFQWS_PORTS_UDP}" -m connbytes --connbytes-dir=original --connbytes-mode=packets --connbytes 1:"''${NFQWS_UDP_PKT_OUT:-6}" -j NFQUEUE --queue-num "$QNUM" --queue-bypass
+              iptables  -t mangle -A ZAPRET -p udp -m multiport --dports "$_udp_ports" -m connbytes --connbytes-dir=original --connbytes-mode=packets --connbytes 1:"''${NFQWS_UDP_PKT_OUT:-6}" -j NFQUEUE --queue-num "$QNUM" --queue-bypass
+              ip6tables -t mangle -A ZAPRET -p udp -m multiport --dports "$_udp_ports" -m connbytes --connbytes-dir=original --connbytes-mode=packets --connbytes 1:"''${NFQWS_UDP_PKT_OUT:-6}" -j NFQUEUE --queue-num "$QNUM" --queue-bypass
             fi
             iptables  -t mangle -A POSTROUTING -j ZAPRET
             ip6tables -t mangle -A POSTROUTING -j ZAPRET
